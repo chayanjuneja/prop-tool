@@ -1,0 +1,14 @@
+[
+  {
+    "title": "US Non-Farm Payrolls (NFP)",
+    "currency": "USD",
+    "impact": "HIGH",
+    "timestamp_utc": "2026-12-04T13:30:00Z"
+  },
+  {
+    "title": "US CPI m/m",
+    "currency": "USD",
+    "impact": "HIGH",
+    "timestamp_utc": "2026-12-10T13:30:00Z"
+  }
+]

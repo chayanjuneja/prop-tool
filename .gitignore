@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+
+# Environment & local secrets/configs
+.env
+.env.*
+agent_service/news_events.json
+
+# Compiled MT5 binaries & logs
+*.ex5
+*.log
+MQL5/Logs/
+
+# Raw API dump (keep cleaned gold_real_m5.csv for reproducible QA/CI)
+data/gc_m5.json
+
+# OS
+.DS_Store
+Thumbs.db

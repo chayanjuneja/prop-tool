@@ -1,0 +1,15 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gold-prop-agent"
+version = "0.1.0"
+description = "LuxAlgo-style SMC XAUUSD MT5 Expert Advisor, Python Guardrail Bridge, and Backtester for The5ers $2.5k 2-Step."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { file = "LICENSE" }
+dependencies = []
+
+[tool.setuptools.packages.find]
+include = ["agent_service*", "backtester*", "qa*"]
