@@ -142,4 +142,10 @@ def run_server(host: str = "127.0.0.1", port: int = 8787) -> None:
 
 
 if __name__ == "__main__":
-    run_server()
+    import argparse
+
+    parser = argparse.ArgumentParser(description="GoldPropGuard HTTP Bridge & Control Server")
+    parser.add_argument("--host", default="127.0.0.1", help="Bind host (use 0.0.0.0 for Tailscale/LAN)")
+    parser.add_argument("--port", type=int, default=8787, help="Bind port (default: 8787)")
+    args = parser.parse_args()
+    run_server(host=args.host, port=args.port)
