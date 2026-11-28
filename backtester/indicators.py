@@ -13,6 +13,20 @@ class Bar:
     low: float
     close: float
     spread_dollars: float = 0.25
+    volume: float = 0.0
+
+
+def relative_volume(bars: List[Bar], period: int = 20) -> List[Optional[float]]:
+    """Computes RVOL = bar.volume / SMA(previous `period` bars volume)."""
+    out: List[Optional[float]] = [None] * len(bars)
+    if period <= 0 or len(bars) <= period:
+        return out
+    rolling_sum = sum(b.volume for b in bars[:period])
+    for i in range(period, len(bars)):
+        avg = rolling_sum / period
+        out[i] = (bars[i].volume / avg) if avg > 0 else 1.0
+        rolling_sum += bars[i].volume - bars[i - period].volume
+    return out
 
 
 def ema(values: List[float], period: int) -> List[Optional[float]]:

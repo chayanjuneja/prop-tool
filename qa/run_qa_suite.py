@@ -55,8 +55,15 @@ def suite_a_lot_sizing(cases: int = 3000) -> Tuple[int, int]:
             sl = rng.uniform(0.05, 30.0)
 
         risk_pct = rng.choice([0.25, 0.50, 1.0]) if i >= 5 else 0.50
-        gr = PropGuardrailEngine(PropFirmConfig(initial_balance=max(bal, 1.0), risk_per_trade_pct=risk_pct))
+        gr = PropGuardrailEngine(
+            PropFirmConfig(initial_balance=max(bal, 1.0), risk_per_trade_pct=risk_pct, fixed_lot_mode=False)
+        )
         lots = gr.calculate_xau_lots(bal, sl)
+
+        # Also verify strict XAUUSD + 0.01 fixed lock on valid inputs
+        gr_fixed = PropGuardrailEngine(PropFirmConfig(initial_balance=max(bal, 1.0), fixed_lot_mode=True, fixed_lot_size=0.01))
+        assert gr_fixed.calculate_xau_lots(max(bal, 2500.0), 4.0, symbol="EURUSD") == 0.0
+        assert gr_fixed.calculate_xau_lots(max(bal, 2500.0), 4.0, symbol="XAUUSD") == 0.01
 
         assert lots >= 0.0, f"Negative lots: {lots}"
         if bal <= 0 or sl <= 0:
@@ -200,9 +207,9 @@ def suite_d_microstructure_chaos(cases: int = 2000) -> Tuple[int, int]:
             hr = rng.randint(0, 23)
             spr = rng.choice([0.15, 0.25, 0.44, 0.46, 1.50])
             b = Bar(datetime(2026, 10, 6, hr, 5), 4000.0, 4005.0, 3995.0, 4002.0, spr)
-            if hr < 8 or hr >= 20 or spr > 0.45:
-                # Must never allow entry outside session or above spread cap
-                assert not (8 <= b.timestamp.hour < 20 and b.spread_dollars <= 0.45)
+            if hr < 12 or hr >= 17 or spr > 0.45:
+                # Must never allow entry outside prime NY/macro session or above spread cap
+                assert not (12 <= b.timestamp.hour < 17 and b.spread_dollars <= 0.45)
         passed += 1
     return passed, cases
 

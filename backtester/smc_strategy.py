@@ -1,32 +1,38 @@
 """LuxAlgo-style Smart Money Concepts (BOS/CHoCH + Order Blocks + FVG) for XAUUSD."""
 
 from dataclasses import dataclass
-from typing import List, Optional
+from datetime import datetime, timedelta
+from typing import List, Optional, Tuple
 
-from .indicators import Bar, atr, ema, rsi
+from .indicators import Bar, atr, ema, relative_volume, rsi
 from .strategy import Signal, resample_to_m15
 
 
 @dataclass(frozen=True)
 class SmcConfig:
-    session_start_hour: int = 8
-    session_end_hour: int = 20
+    session_start_hour: int = 12     # NY Pre-market / Macro News / NY Open (UTC)
+    session_end_hour: int = 17       # Peak Gold volume window (12:00-17:00 UTC)
     max_spread_dollars: float = 0.45
+    min_rvol: float = 1.30           # Require closed bar volume >= 1.3x 20-bar SMA
+    rvol_period: int = 20
     htf_swing_len: int = 5           # M15 pivot length for BOS/CHoCH
     ltf_swing_len: int = 3           # M5 pivot length for local OB displacement
     atr_period: int = 14
     min_atr_dollars: float = 0.80
-    max_atr_dollars: float = 8.50    # Keeps 0.01 lot <= 0.5% risk on $2.5k account
+    max_atr_dollars: float = 8.50    # Keeps 0.01 lot safely within daily risk budget
     min_fvg_atr_ratio: float = 0.20  # Minimum FVG size relative to ATR
     ob_lookback_bars: int = 6        # Lookback to find opposing candle before displacement
     zone_ttl_bars: int = 45          # Expire unmitigated OB/FVG after N M5 bars
     sl_atr_buffer: float = 0.35      # Buffer beyond OB/FVG boundary
     min_sl_atr_mult: float = 1.10
     max_sl_atr_mult: float = 2.20
-    reward_risk_ratio: float = 1.15  # High-win-rate R:R target
+    reward_risk_ratio: float = 1.00  # High-win-rate R:R target (1:1)
     breakeven_trigger_r: float = 0.0 # Disabled by default: early BE clips Gold pullback winners
     rsi_period: int = 14
     ema_trend_period: int = 20
+    enable_post_news_momentum: bool = True
+    post_news_min_rvol: float = 1.50
+    news_timestamps: Tuple[datetime, ...] = ()
 
 
 @dataclass
@@ -55,6 +61,8 @@ class SmcMomentumStrategy:
         self.ltf_atr = atr(m5_bars, self.cfg.atr_period)
         self.ltf_rsi = rsi(closes, self.cfg.rsi_period)
         self.ltf_ema = ema(closes, self.cfg.ema_trend_period)
+        self.ltf_rvol = relative_volume(m5_bars, self.cfg.rvol_period)
+        self.has_volume = any(b.volume > 0 for b in m5_bars)
 
         self.m15_bars, self.m5_to_m15 = resample_to_m15(m5_bars)
         self.htf_bias = self._compute_htf_structure_bias(self.m15_bars, self.cfg.htf_swing_len)
@@ -172,7 +180,32 @@ class SmcMomentumStrategy:
         if a < self.cfg.min_atr_dollars or a > self.cfg.max_atr_dollars:
             return None
 
+        rvol1 = self.ltf_rvol[idx - 1]
+        if self.has_volume:
+            if rvol1 is None or rvol1 < self.cfg.min_rvol:
+                return None
+
+        # Check The5ers news safety: block [-15m, +3m]; allow post-news momentum in [+3m, +20m]
+        in_post_news_window = False
+        for n_ts in self.cfg.news_timestamps:
+            if (n_ts - timedelta(minutes=15)) <= bar_now.timestamp <= (n_ts + timedelta(minutes=3)):
+                return None
+            if (n_ts + timedelta(minutes=3)) < bar_now.timestamp <= (n_ts + timedelta(minutes=20)):
+                in_post_news_window = True
+
         b1 = self.bars[idx - 1]
+        # Post-news high-volume momentum continuation trigger (strictly after +-2m The5ers ban)
+        if self.cfg.enable_post_news_momentum and in_post_news_window:
+            effective_rvol = rvol1 if rvol1 is not None else self.cfg.post_news_min_rvol
+            body = b1.close - b1.open
+            if effective_rvol >= self.cfg.post_news_min_rvol:
+                if bias == 1 and body >= a * 0.90 and b1.close > e1 and 45.0 <= r1 <= 72.0:
+                    sl_dist = min(max(a * 1.40, a * self.cfg.min_sl_atr_mult), a * self.cfg.max_sl_atr_mult)
+                    return Signal("BUY", sl_dist, sl_dist * self.cfg.reward_risk_ratio)
+                if bias == -1 and -body >= a * 0.90 and b1.close < e1 and 28.0 <= r1 <= 55.0:
+                    sl_dist = min(max(a * 1.40, a * self.cfg.min_sl_atr_mult), a * self.cfg.max_sl_atr_mult)
+                    return Signal("SELL", sl_dist, sl_dist * self.cfg.reward_risk_ratio)
+
         # Look at zones active BEFORE bar idx-1 tapped them (at idx-2)
         candidate_zones = self.zones_by_idx[idx - 2]
 

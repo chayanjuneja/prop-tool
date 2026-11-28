@@ -63,8 +63,35 @@ def make_handler(bridge_state: BridgeState):
             self.end_headers()
             self.wfile.write(body)
 
+        def _send_html(self, html: str) -> None:
+            body = html.encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
         def do_GET(self) -> None:
-            if self.path.startswith("/health"):
+            if self.path == "/" or self.path.startswith("/?"):
+                self._send_html(
+                    """<!doctype html><html><head><meta charset="utf-8"><title>GoldPropGuard Control</title>
+<style>body{font-family:system-ui,sans-serif;background:#0f172a;color:#e2e8f0;max-width:540px;margin:40px auto;padding:20px}
+.card{background:#1e293b;border:1px solid #334155;border-radius:10px;padding:18px}
+button{padding:10px 16px;border:0;border-radius:6px;cursor:pointer;font-weight:600;margin-right:8px}
+.halt{background:#ef4444;color:#fff}.go{background:#22c55e;color:#052e16}
+pre{background:#020617;padding:12px;border-radius:6px;overflow:auto;font-size:12px}</style></head>
+<body><div class="card"><h2>XAUUSD 0.01-Lot Prop Guard</h2>
+<p>Controls MT5 EA via <code>http://127.0.0.1:8787/regime</code></p>
+<button class="halt" onclick="setKill(true)">PAUSE / HALT BOT</button>
+<button class="go" onclick="setKill(false)">RESUME BOT</button>
+<pre id="st">Loading...</pre></div>
+<script>
+async function refresh(){const r=await fetch('/regime');document.getElementById('st').textContent=JSON.stringify(await r.json(),null,2);}
+async function setKill(h){await fetch('/kill',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({halt:h})});refresh();}
+refresh();setInterval(refresh,5000);
+</script></body></html>"""
+                )
+            elif self.path.startswith("/health"):
                 self._send_json(200, {"status": "ok"})
             elif self.path.startswith("/regime"):
                 self._send_json(200, bridge_state.evaluate_regime(use_ai=True))

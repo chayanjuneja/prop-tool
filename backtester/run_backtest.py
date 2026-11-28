@@ -35,6 +35,7 @@ def load_mt5_csv(csv_path: Path) -> List[Bar]:
             spread_pts = float(norm.get("spread", 25))
             # MT5 exports spread in points (2-digit XAUUSD: 25 pts = $0.25)
             spread_dollars = spread_pts * 0.01 if spread_pts > 2.0 else spread_pts
+            vol_val = float(norm.get("volume", norm.get("tickvol", norm.get("vol", 0.0))) or 0.0)
             bars.append(
                 Bar(
                     timestamp=dt,
@@ -43,6 +44,7 @@ def load_mt5_csv(csv_path: Path) -> List[Bar]:
                     low=float(norm["low"]),
                     close=float(norm["close"]),
                     spread_dollars=spread_dollars,
+                    volume=vol_val,
                 )
             )
     return bars
@@ -62,6 +64,7 @@ def generate_sample_xauusd_m5(days: int = 45, seed: int = 42) -> List[Bar]:
             continue
         # Regime drift + pullback cycles during London/NY
         in_session = 8 <= ts.hour < 20
+        prime_ny = 12 <= ts.hour < 17
         macro_trend = 0.06 * math.sin(i / 420.0) + 0.03 * math.cos(i / 170.0)
         pullback_wave = -0.18 * math.sin(i / 18.0) if in_session else 0.0
         vol = 1.65 if in_session else 0.55
@@ -72,7 +75,9 @@ def generate_sample_xauusd_m5(days: int = 45, seed: int = 42) -> List[Bar]:
         wick_dn = abs(rng.gauss(0.0, vol * 0.55))
         h = max(o, c) + wick_up
         l = min(o, c) - wick_dn
-        bars.append(Bar(timestamp=ts, open=o, high=h, low=l, close=c, spread_dollars=0.25))
+        base_vol = 1100.0 if prime_ny else (550.0 if in_session else 260.0)
+        bar_vol = max(50.0, base_vol * (1.0 + abs(delta) / 2.5) * rng.uniform(0.6, 1.5))
+        bars.append(Bar(timestamp=ts, open=o, high=h, low=l, close=c, spread_dollars=0.25, volume=round(bar_vol, 0)))
         price = c
     return bars
 

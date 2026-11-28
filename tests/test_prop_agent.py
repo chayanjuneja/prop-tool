@@ -10,7 +10,7 @@ from agent_service.config import PropFirmConfig
 from agent_service.guardrails import PropGuardrailEngine
 from agent_service.news_regime import NewsEvent, check_news_blackout
 from agent_service.server import BridgeState
-from backtester.indicators import Bar, adx, atr, ema, rsi
+from backtester.indicators import Bar, adx, atr, ema, relative_volume, rsi
 from backtester.run_backtest import generate_sample_xauusd_m5
 from backtester.simulator import run_simulation
 from backtester.smc_strategy import SmcMomentumStrategy
@@ -18,7 +18,7 @@ from backtester.smc_strategy import SmcMomentumStrategy
 
 class TestGuardrails(unittest.TestCase):
     def test_lot_sizing_caps_at_half_percent_risk(self) -> None:
-        gr = PropGuardrailEngine(PropFirmConfig(initial_balance=2500.0, risk_per_trade_pct=0.5))
+        gr = PropGuardrailEngine(PropFirmConfig(initial_balance=2500.0, risk_per_trade_pct=0.5, fixed_lot_mode=False))
         # 0.5% of $2,500 = $12.50. With $4.00 SL on XAUUSD (100 oz/lot -> $400/lot), raw=0.03125 -> 0.03 lots
         lots = gr.calculate_xau_lots(balance=2500.0, sl_distance_dollars=4.0)
         self.assertEqual(lots, 0.03)
@@ -26,6 +26,14 @@ class TestGuardrails(unittest.TestCase):
         # If SL is $15.00, 0.01 lots would risk $15.00 (> $12.50), so must return 0.0 (skip trade)
         too_wide = gr.calculate_xau_lots(balance=2500.0, sl_distance_dollars=15.0)
         self.assertEqual(too_wide, 0.0)
+
+    def test_strict_xauusd_and_fixed_001_lot_lock(self) -> None:
+        gr = PropGuardrailEngine(PropFirmConfig(initial_balance=2500.0, fixed_lot_mode=True, fixed_lot_size=0.01))
+        self.assertEqual(gr.calculate_xau_lots(2500.0, 4.0, symbol="XAUUSD"), 0.01)
+        self.assertEqual(gr.calculate_xau_lots(50000.0, 2.0, symbol="XAUUSD.pro"), 0.01)
+        # Non-XAUUSD symbols must always return 0.0
+        self.assertEqual(gr.calculate_xau_lots(2500.0, 4.0, symbol="EURUSD"), 0.0)
+        self.assertEqual(gr.calculate_xau_lots(2500.0, 4.0, symbol="US30"), 0.0)
 
     def test_daily_drawdown_circuit_breaker(self) -> None:
         gr = PropGuardrailEngine(PropFirmConfig(initial_balance=2500.0, ea_max_daily_loss_pct=3.0))

@@ -8,6 +8,9 @@ class PropFirmConfig:
     """Hard risk parameters and safety buffers for The5ers $2.5k 2-Step."""
 
     initial_balance: float = 2500.0
+    allowed_symbol: str = "XAUUSD"
+    fixed_lot_mode: bool = True             # Lock position size strictly to fixed_lot_size
+    fixed_lot_size: float = 0.01
     firm_max_total_loss_pct: float = 10.0   # The5ers static max DD: 10% ($2,250 floor)
     firm_max_daily_loss_pct: float = 5.0    # The5ers daily loss limit: 5%
     ea_max_total_loss_pct: float = 8.0      # Bot hard stop at 8% ($2,300 floor)

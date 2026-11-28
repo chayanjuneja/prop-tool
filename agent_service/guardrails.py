@@ -98,6 +98,10 @@ class PropGuardrailEngine:
 
         return True, "OK"
 
+    def is_symbol_allowed(self, symbol: str) -> bool:
+        """Enforces strict XAUUSD-only trading."""
+        return self.cfg.allowed_symbol.upper() in symbol.upper()
+
     def calculate_xau_lots(
         self,
         balance: float,
@@ -106,14 +110,27 @@ class PropGuardrailEngine:
         min_lot: float = 0.01,
         max_lot: float = 50.0,
         lot_step: float = 0.01,
+        symbol: str = "XAUUSD",
     ) -> float:
-        """Calculates XAUUSD lots strictly capped at risk_per_trade_pct (floors to step)."""
+        """Returns strict 0.01 fixed lot (when fixed_lot_mode=True) or 0.5%-capped lots on XAUUSD only."""
+        if not self.is_symbol_allowed(symbol):
+            return 0.0
         if balance <= 0 or sl_distance_dollars <= 0:
             return 0.0
-        risk_money = balance * (self.cfg.risk_per_trade_pct / 100.0)
+
         loss_per_lot = sl_distance_dollars * contract_size
         if loss_per_lot <= 0:
             return 0.0
+
+        if self.cfg.fixed_lot_mode:
+            fixed = max(min_lot, min(max_lot, round(self.cfg.fixed_lot_size, 2)))
+            # Safety guard: even 0.01 lot must never risk >= half the EA's daily drawdown cap in 1 trade
+            max_single_trade_loss = balance * (self.cfg.ea_max_daily_loss_pct / 200.0)
+            if fixed * loss_per_lot > max_single_trade_loss:
+                return 0.0
+            return fixed
+
+        risk_money = balance * (self.cfg.risk_per_trade_pct / 100.0)
         raw_lots = risk_money / loss_per_lot
         stepped = math.floor(raw_lots / lot_step) * lot_step
         if stepped < min_lot:
