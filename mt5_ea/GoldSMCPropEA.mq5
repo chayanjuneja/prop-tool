@@ -51,7 +51,7 @@ input int            InpPostNewsWindowMins   = 20;    // End of post-news moment
 input group "=== SMC Structure, Order Blocks & FVG ==="
 input ENUM_TIMEFRAMES InpLtf        = PERIOD_M5;   // Execution timeframe
 input ENUM_TIMEFRAMES InpHtf        = PERIOD_M15;  // Higher-timeframe structure (BOS/CHoCH)
-input int    InpHtfSwingLen         = 5;        // M15 Swing pivot length (confirmed right-side)
+input int    InpHtfSwingLen         = 8;        // M15 2-hour Swing pivot length (confirmed right-side)
 input double InpMinFvgAtrRatio      = 0.20;     // Min FVG height as multiple of ATR
 input double InpObDisplacementAtr   = 1.10;     // Min candle body multiple of ATR for OB
 input int    InpObLookbackBars      = 6;        // Bars to scan back for opposing OB candle
@@ -61,10 +61,10 @@ input int    InpEmaPeriod           = 20;       // M5 EMA trend alignment for mo
 input double InpMinAtrDollars       = 0.80;     // Skip dead chop if ATR < $0.80
 input double InpMaxAtrDollars       = 8.50;     // Skip extreme spike volatility
 input int    InpRsiPeriod           = 14;       // M5 RSI confirmation period
-input double InpSlAtrBuffer         = 0.35;     // SL padding beyond OB/FVG boundary
-input double InpMinSlAtrMult        = 1.10;     // Minimum SL distance (ATR multiple)
+input double InpSlAtrBuffer         = 0.50;     // SL padding beyond OB/FVG boundary
+input double InpMinSlAtrMult        = 1.40;     // Minimum SL distance (ATR multiple)
 input double InpMaxSlAtrMult        = 2.20;     // Maximum SL distance (ATR multiple)
-input double InpRewardRiskRatio     = 1.00;     // Take Profit = SL * R:R (high win-rate 1:1 profile)
+input double InpRewardRiskRatio     = 0.90;     // Take Profit = SL * R:R (high win-rate 0.90:1 profile)
 input double InpBreakevenTriggerR   = 0.00;     // Move SL to breakeven at +X * R (0=off)
 input bool   InpDrawZones           = true;     // Draw OB & FVG boxes on chart
 input bool   InpShowControlPanel    = true;     // Draw clickable control buttons on chart

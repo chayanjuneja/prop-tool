@@ -15,7 +15,7 @@ class SmcConfig:
     max_spread_dollars: float = 0.45
     min_rvol: float = 1.30           # Require closed bar volume >= 1.3x 20-bar SMA
     rvol_period: int = 20
-    htf_swing_len: int = 5           # M15 pivot length for BOS/CHoCH
+    htf_swing_len: int = 8           # M15 2-hour swing pivot length for BOS/CHoCH
     ltf_swing_len: int = 3           # M5 pivot length for local OB displacement
     atr_period: int = 14
     min_atr_dollars: float = 0.80
@@ -23,10 +23,10 @@ class SmcConfig:
     min_fvg_atr_ratio: float = 0.20  # Minimum FVG size relative to ATR
     ob_lookback_bars: int = 6        # Lookback to find opposing candle before displacement
     zone_ttl_bars: int = 45          # Expire unmitigated OB/FVG after N M5 bars
-    sl_atr_buffer: float = 0.35      # Buffer beyond OB/FVG boundary
-    min_sl_atr_mult: float = 1.10
+    sl_atr_buffer: float = 0.50      # Wick breathing room beyond OB/FVG boundary
+    min_sl_atr_mult: float = 1.40
     max_sl_atr_mult: float = 2.20
-    reward_risk_ratio: float = 1.00  # High-win-rate R:R target (1:1)
+    reward_risk_ratio: float = 0.90  # High-win-rate target (0.90:1)
     breakeven_trigger_r: float = 0.0 # Disabled by default: early BE clips Gold pullback winners
     rsi_period: int = 14
     ema_trend_period: int = 20
